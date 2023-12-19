@@ -1,0 +1,11 @@
+/data/
+/.idea/
+/CycleGAN/bin/bin/python
+/CycleGAN/bin/bin/python3
+/CycleGAN/bin/lib64/
+/CycleGAN/bin/pyvenv.cfg
+/CycleGAN/data/MR_crop/testA/sub-624102_ses-V03_T1w.nii.gz
+/CycleGAN/data/MR_crop/testB/sub-624102_ses-V03_T2w.nii.gz
+/CycleGAN/env/
+/CycleGAN/generate_images/synthetic_images/A/sub-624102_ses-V03_T2w_synthetic.nii.gz
+/CycleGAN/generate_images/synthetic_images/B/sub-624102_ses-V03_T1w_synthetic.nii.gz

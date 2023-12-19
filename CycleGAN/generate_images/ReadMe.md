@@ -12,9 +12,10 @@ G_B2A_model.hdf5
 ```
 
 #### Create directories for generated images:
+All images must be of size (156, 182, 156).
 ```
-./synthetic_images/A
-./synthetic_images/B
+./generate_images/synthetic_images/A
+./generate_images/synthetic_images/B
 ```
 
 #### Comment row 242:
@@ -27,7 +28,13 @@ G_B2A_model.hdf5
 self.load_model_and_generate_synthetic_images()
 ```
 
+#### Put input data in:
+
+* CycleGAN/data/MR_crop/testA
+* CycleGAN/data/MR_crop/testA
+
 #### Then run:
+Run from the *CycleGAN* folder.
 ```
 python CycleGAN_3D.py
 ```

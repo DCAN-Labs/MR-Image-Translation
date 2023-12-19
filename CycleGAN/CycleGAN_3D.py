@@ -1,12 +1,14 @@
-from keras.layers import Layer, Input, Conv3D, Activation, add, BatchNormalization, UpSampling3D, ZeroPadding2D, Conv3DTranspose, Flatten, MaxPooling2D, AveragePooling3D
-from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization, InputSpec
-from keras.layers.advanced_activations import LeakyReLU
-from keras.layers.core import Dense
-from keras.optimizers import Adam
-from keras.backend import mean
-from keras.models import Model, model_from_json
-from keras.utils import plot_model
-from keras.engine.topology import Container
+from tensorflow.keras.layers import Layer, Input, Conv3D, Activation, add, BatchNormalization, UpSampling3D, ZeroPadding2D, Conv3DTranspose, Flatten, MaxPooling2D, AveragePooling3D
+from tensorflow.keras.layers import InputSpec
+from tensorflow_addons.layers import InstanceNormalization
+
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.backend import mean
+from tensorflow.keras.models import Model, model_from_json
+from tensorflow.keras.utils import plot_model
+# from keras.engine import Network
 
 from collections import OrderedDict
 from scipy.misc import imsave, toimage  # has depricated
@@ -20,7 +22,7 @@ import csv
 import sys
 import os
 
-import keras.backend as K
+import tensorflow.keras.backend as K
 import tensorflow as tf
 import nibabel as nib
 
@@ -145,99 +147,99 @@ class CycleGAN():
 
 
         # Set up parallel processing
-        strategy = tf.contrib.distribute.MirroredStrategy()
-        with strategy.scope():
+        # strategy = tf.contrib.distribute.MirroredStrategy()
+        # with strategy.scope():
 
             # ======= Discriminator model ==========
-            if self.use_multiscale_discriminator:
-                D_A = self.modelMultiScaleDiscriminator()
-                D_B = self.modelMultiScaleDiscriminator()
-                loss_weights_D = [0.5, 0.5] # 0.5 since we train on real and synthetic images
-            else:
-                D_A = self.modelDiscriminator()
-                D_B = self.modelDiscriminator()
-                loss_weights_D = [0.5]  # 0.5 since we train on real and synthetic images
-            D_A.summary()
+        if self.use_multiscale_discriminator:
+            D_A = self.modelMultiScaleDiscriminator()
+            D_B = self.modelMultiScaleDiscriminator()
+            loss_weights_D = [0.5, 0.5] # 0.5 since we train on real and synthetic images
+        else:
+            D_A = self.modelDiscriminator()
+            D_B = self.modelDiscriminator()
+            loss_weights_D = [0.5]  # 0.5 since we train on real and synthetic images
+        D_A.summary()
 
-            # Discriminator builds
-            image_A = Input(shape=self.img_shape)
-            image_B = Input(shape=self.img_shape)
-            guess_A = D_A(image_A)
-            guess_B = D_B(image_B)
-            self.D_A = Model(inputs=image_A, outputs=guess_A, name='D_A_model')
-            self.D_B = Model(inputs=image_B, outputs=guess_B, name='D_B_model')
+        # Discriminator builds
+        image_A = Input(shape=self.img_shape)
+        image_B = Input(shape=self.img_shape)
+        guess_A = D_A(image_A)
+        guess_B = D_B(image_B)
+        self.D_A = Model(inputs=image_A, outputs=guess_A, name='D_A_model')
+        self.D_B = Model(inputs=image_B, outputs=guess_B, name='D_B_model')
 
-            #self.D_A.summary()
-            #self.D_B.summary()
-            self.D_A.compile(optimizer=self.opt_D,
-                             loss=self.lse,
-                             loss_weights=loss_weights_D)
-            self.D_B.compile(optimizer=self.opt_D,
-                             loss=self.lse,
-                             loss_weights=loss_weights_D)
+        #self.D_A.summary()
+        #self.D_B.summary()
+        self.D_A.compile(optimizer=self.opt_D,
+                         loss=self.lse,
+                         loss_weights=loss_weights_D)
+        self.D_B.compile(optimizer=self.opt_D,
+                         loss=self.lse,
+                         loss_weights=loss_weights_D)
 
-            # Use containers to avoid falsy keras error about weight descripancies
-            self.D_A_static = Container(inputs=image_A, outputs=guess_A, name='D_A_static_model')
-            self.D_B_static = Container(inputs=image_B, outputs=guess_B, name='D_B_static_model')
+        # Use containers to avoid falsy keras error about weight descripancies
+        self.D_A_static = Model(inputs=image_A, outputs=guess_A, name='D_A_static_model')
+        self.D_B_static = Model(inputs=image_B, outputs=guess_B, name='D_B_static_model')
 
-            # ======= Generator model ==========
-            # Do note update discriminator weights during generator training
-            self.D_A_static.trainable = False
-            self.D_B_static.trainable = False
+        # ======= Generator model ==========
+        # Do note update discriminator weights during generator training
+        self.D_A_static.trainable = False
+        self.D_B_static.trainable = False
 
-            # Generators
-            self.G_A2B = self.modelGenerator(name='G_A2B_model')
-            self.G_B2A = self.modelGenerator(name='G_B2A_model')
-            self.G_A2B.summary()
-            self.G_B2A.summary()
+        # Generators
+        self.G_A2B = self.modelGenerator(name='G_A2B_model')
+        self.G_B2A = self.modelGenerator(name='G_B2A_model')
+        self.G_A2B.summary()
+        self.G_B2A.summary()
 
-            if self.use_identity_learning:
-                self.G_A2B.compile(optimizer=self.opt_G, loss='MAE')
-                self.G_B2A.compile(optimizer=self.opt_G, loss='MAE')
+        if self.use_identity_learning:
+            self.G_A2B.compile(optimizer=self.opt_G, loss='MAE')
+            self.G_B2A.compile(optimizer=self.opt_G, loss='MAE')
 
-            # Generator builds
-            real_A = Input(shape=self.img_shape, name='real_A')
-            real_B = Input(shape=self.img_shape, name='real_B')
-            synthetic_B = self.G_A2B(real_A)
-            synthetic_A = self.G_B2A(real_B)
-            dA_guess_synthetic = self.D_A_static(synthetic_A)
-            dB_guess_synthetic = self.D_B_static(synthetic_B)
-            reconstructed_A = self.G_B2A(synthetic_B)
-            reconstructed_B = self.G_A2B(synthetic_A)
+        # Generator builds
+        real_A = Input(shape=self.img_shape, name='real_A')
+        real_B = Input(shape=self.img_shape, name='real_B')
+        synthetic_B = self.G_A2B(real_A)
+        synthetic_A = self.G_B2A(real_B)
+        dA_guess_synthetic = self.D_A_static(synthetic_A)
+        dB_guess_synthetic = self.D_B_static(synthetic_B)
+        reconstructed_A = self.G_B2A(synthetic_B)
+        reconstructed_B = self.G_A2B(synthetic_A)
 
-            model_outputs = [reconstructed_A, reconstructed_B]
-            compile_losses = [self.cycle_loss, self.cycle_loss,
-                              self.lse, self.lse]
-            compile_weights = [self.lambda_1, self.lambda_2,
-                               self.lambda_D, self.lambda_D]
+        model_outputs = [reconstructed_A, reconstructed_B]
+        compile_losses = [self.cycle_loss, self.cycle_loss,
+                          self.lse, self.lse]
+        compile_weights = [self.lambda_1, self.lambda_2,
+                           self.lambda_D, self.lambda_D]
 
-            if self.use_multiscale_discriminator:
-                for _ in range(2):
-                    compile_losses.append(self.lse)
-                    compile_weights.append(self.lambda_D)  # * 1e-3)  # Lower weight to regularize the model
-                for i in range(2):
-                    model_outputs.append(dA_guess_synthetic[i])
-                    model_outputs.append(dB_guess_synthetic[i])
-            else:
-                model_outputs.append(dA_guess_synthetic)
-                model_outputs.append(dB_guess_synthetic)
+        if self.use_multiscale_discriminator:
+            for _ in range(2):
+                compile_losses.append(self.lse)
+                compile_weights.append(self.lambda_D)  # * 1e-3)  # Lower weight to regularize the model
+            for i in range(2):
+                model_outputs.append(dA_guess_synthetic[i])
+                model_outputs.append(dB_guess_synthetic[i])
+        else:
+            model_outputs.append(dA_guess_synthetic)
+            model_outputs.append(dB_guess_synthetic)
 
-            if self.use_supervised_learning:
-                model_outputs.append(synthetic_A)
-                model_outputs.append(synthetic_B)
-                compile_losses.append('MAE')
-                compile_losses.append('MAE')
-                compile_weights.append(self.supervised_weight)
-                compile_weights.append(self.supervised_weight)
+        if self.use_supervised_learning:
+            model_outputs.append(synthetic_A)
+            model_outputs.append(synthetic_B)
+            compile_losses.append('MAE')
+            compile_losses.append('MAE')
+            compile_weights.append(self.supervised_weight)
+            compile_weights.append(self.supervised_weight)
 
-            self.G_model = Model(inputs=[real_A, real_B],
-                                 outputs=model_outputs,
-                                 name='G_model')
+        self.G_model = Model(inputs=[real_A, real_B],
+                             outputs=model_outputs,
+                             name='G_model')
 
-            self.G_model.compile(optimizer=self.opt_G,
-                                 loss=compile_losses,
-                                 loss_weights=compile_weights)
-            self.G_A2B.summary()
+        self.G_model.compile(optimizer=self.opt_G,
+                             loss=compile_losses,
+                             loss_weights=compile_weights)
+        self.G_A2B.summary()
 
 
 
@@ -249,13 +251,13 @@ class CycleGAN():
 
         # ======= Avoid pre-allocating GPU memory ==========
         # TensorFlow wizardry
-        config = tf.ConfigProto()
+        config = tf.compat.v1.ConfigProto()
 
         # Don't pre-allocate memory; allocate as-needed
         config.gpu_options.allow_growth = True
 
         # Create a session with the above options specified.
-        K.tensorflow_backend.set_session(tf.Session(config=config))
+        tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=config))
 
         # ===== Tests ======
         # Simple Model
@@ -269,8 +271,8 @@ class CycleGAN():
         # ======= Initialize training ==========
         sys.stdout.flush()
         #plot_model(self.G_A2B, to_file='GA2B_expanded_model_new.png', show_shapes=True)
-        self.train(epochs=self.epochs, batch_size=self.batch_size, save_interval=self.save_interval)
-        #self.load_model_and_generate_synthetic_images()
+#        self.train(epochs=self.epochs, batch_size=self.batch_size, save_interval=self.save_interval)
+        self.load_model_and_generate_synthetic_images()
 
 #===============================================================================
 # Architecture functions

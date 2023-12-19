@@ -1,29 +1,23 @@
-from keras.layers import Layer, Input, Conv2D, Activation, add, BatchNormalization, UpSampling2D, ZeroPadding2D, Conv2DTranspose, Flatten, MaxPooling2D, AveragePooling2D
-from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization, InputSpec
-from keras.layers.advanced_activations import LeakyReLU
-from keras.layers.core import Dense
-from keras.optimizers import Adam
-from keras.backend import mean
-from keras.models import Model, model_from_json
-from keras.utils import plot_model
-from keras.engine.topology import Container
-
-from collections import OrderedDict
-from scipy.misc import imsave, toimage  # has depricated
-import numpy as np
-import random
-import datetime
-import time
-import json
-import math
 import csv
-import sys
+import datetime
+import json
 import os
+import random
+import sys
+import time
+from collections import OrderedDict
 
-import keras.backend as K
+import tensorflow.keras.backend as K
+import numpy as np
 import tensorflow as tf
+from tensorflow.keras.layers import Layer, Input, Conv2D, Activation, add, UpSampling2D, Conv2DTranspose, Flatten, AveragePooling2D
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Model
+from scipy.misc import toimage  # has depricated
 
 import load_slices
+# from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization, InputSpec
 
 np.random.seed(seed=12345)
 
@@ -220,7 +214,7 @@ class CycleGAN():
 
         # ======= Avoid pre-allocating GPU memory ==========
         # TensorFlow wizardry
-        config = tf.ConfigProto()
+        config = tf.compat.v1.ConfigProto()
 
         # Don't pre-allocate memory; allocate as-needed
         config.gpu_options.allow_growth = True

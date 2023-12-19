@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from PIL import Image
-from keras.utils import Sequence
+from tensorflow.keras.utils import Sequence
 #from skimage.io import imread
 
 
