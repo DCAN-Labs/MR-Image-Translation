@@ -7,6 +7,7 @@ input_folder='<folder containing preprocessed images that need to be cropped>'
 output_folder='<output folder for cropped images>'
 
 def crop_images(image_dir, output_dir):
+    #Adjust all of these dimensions according to your specific data in order to acheive dimensions of 156 X 182 X 156
     x_max = 171
     x_min = 15
 
