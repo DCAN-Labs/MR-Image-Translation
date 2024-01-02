@@ -9,3 +9,7 @@
 /CycleGAN/env/
 /CycleGAN/generate_images/synthetic_images/A/sub-624102_ses-V03_T2w_synthetic.nii.gz
 /CycleGAN/generate_images/synthetic_images/B/sub-624102_ses-V03_T1w_synthetic.nii.gz
+/CycleGAN/bin/
+/CycleGAN/images/20231219-145345/
+/env/
+/slurm_scripts/generate_mesabi.sh
